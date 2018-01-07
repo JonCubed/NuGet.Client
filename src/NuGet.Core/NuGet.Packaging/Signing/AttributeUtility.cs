@@ -6,6 +6,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
+#if IS_DESKTOP
+using System.Security.Cryptography.Pkcs;
+#endif
 using System.Security.Cryptography.X509Certificates;
 using NuGet.Common;
 using NuGet.Packaging.Signing.DerEncoding;
@@ -15,7 +18,6 @@ namespace NuGet.Packaging.Signing
     public static class AttributeUtility
     {
 #if IS_DESKTOP
-
         /// <summary>
         /// Create a CommitmentTypeIndication attribute.
         /// https://tools.ietf.org/html/rfc5126.html#section-5.11.1
@@ -62,6 +64,17 @@ namespace NuGet.Packaging.Signing
             }
 
             // All values were unknown
+            return SignatureType.Unknown;
+        }
+
+        internal static SignatureType GetCommitmentTypeIndication(SignerInfo signer)
+        {
+            var commitmentTypeIndication = signer.SignedAttributes.GetAttributeOrDefault(Oids.CommitmentTypeIndication);
+            if (commitmentTypeIndication != null)
+            {
+                return GetCommitmentTypeIndication(commitmentTypeIndication);
+            }
+
             return SignatureType.Unknown;
         }
 
@@ -130,12 +143,12 @@ namespace NuGet.Packaging.Signing
         /// <summary>
         /// Create a signing-certificate-v2 from a certificate.
         /// </summary>
-        public static CryptographicAttributeObject GetSigningCertificateV2(IEnumerable<X509Certificate2> chain, Common.HashAlgorithmName hashAlgorithm)
+        public static CryptographicAttributeObject GetSigningCertificateV2(IReadOnlyList<X509Certificate2> chain, Common.HashAlgorithmName hashAlgorithm)
         {
-            // Build the cert chain as-is
-            var certEntries = chain.Select(e => CreateESSCertIDv2Entry(e, hashAlgorithm)).ToList();
+            var signingCertificateV2 = SigningCertificateV2.Create(chain, hashAlgorithm);
+            var desiredSequence = signingCertificateV2.Encode();
 
-            var data = new AsnEncodedData(Oids.SigningCertificateV2, DerEncoder.ConstructSequence(certEntries));
+            var data = new AsnEncodedData(Oids.SigningCertificateV2, desiredSequence);
 
             // Create an attribute
             return new CryptographicAttributeObject(
@@ -153,10 +166,10 @@ namespace NuGet.Packaging.Signing
             SigningSpecifications signingSpecifications)
         {
             return IsValidSigningCertificateV2(
-                signatureCertificate: signatureCertificate,
-                chain: SigningUtility.GetCertificateChain(chain),
-                signingCertV2Attribute: signingCertV2Attribute,
-                signingSpecifications: signingSpecifications);
+                signatureCertificate,
+                SigningUtility.GetCertificateChain(chain),
+                signingCertV2Attribute,
+                signingSpecifications);
         }
 
         /// <summary>
@@ -169,10 +182,10 @@ namespace NuGet.Packaging.Signing
             SigningSpecifications signingSpecifications)
         {
             return IsValidSigningCertificateV2(
-                signatureCertificate: signatureCertificate,
-                localCertificateChain: chain,
-                attributeCertificateChain: GetESSCertIDv2Entries(signingCertV2Attribute),
-                signingSpecifications: signingSpecifications);
+                signatureCertificate,
+                chain,
+                GetESSCertIDv2Entries(signingCertV2Attribute),
+                signingSpecifications);
         }
 
         /// <summary>
@@ -269,7 +282,7 @@ namespace NuGet.Packaging.Signing
         /// <summary>
         /// CryptographicAttributeObject -> DerSequenceReader
         /// </summary>
-        private static DerSequenceReader ToDerSequenceReader(this CryptographicAttributeObject attribute)
+        internal static DerSequenceReader ToDerSequenceReader(this CryptographicAttributeObject attribute)
         {
             var values = attribute.Values.ToList();
 
@@ -285,7 +298,7 @@ namespace NuGet.Packaging.Signing
         /// Throw a signature exception due to an invalid attribute. This is used for unusual situations
         /// where the format is corrupt.
         /// </summary>
-        internal static void ThrowInvalidAttributeException(CryptographicAttributeObject attribute)
+        private static void ThrowInvalidAttributeException(CryptographicAttributeObject attribute)
         {
             throw new SignatureException(string.Format(CultureInfo.CurrentCulture, Strings.SignatureContainsInvalidAttribute, attribute.Oid.Value));
         }
@@ -315,31 +328,46 @@ namespace NuGet.Packaging.Signing
         {
             // Get hash Oid
             var hashAlgorithmOid = hashAlgorithm.ConvertToOidString();
-            var entry = GetESSCertIDv2Entry(cert, hashAlgorithm);
+            var hash = CertificateUtility.GetHash(cert, hashAlgorithm);
+            var serialNumber = cert.GetSerialNumber();
+
+            // Convert from little endian to big endian.
+            Array.Reverse(serialNumber);
 
             return DerEncoder.ConstructSegmentedSequence(new List<byte[][]>()
             {
-                // AlgorithmIdentifier
-                DerEncoder.SegmentedEncodeOid(hashAlgorithmOid),
+                DerEncoder.ConstructSegmentedSequence(new List<byte[][]>()
+                {
+                    // AlgorithmIdentifier
+                    DerEncoder.ConstructSegmentedSequence(new List<byte[][]>()
+                    {
+                        DerEncoder.SegmentedEncodeOid(hashAlgorithmOid)
+                    }),
 
-                // Hash
-                DerEncoder.SegmentedEncodeOctetString(entry.Value)
+                    // Hash
+                    DerEncoder.SegmentedEncodeOctetString(hash),
+
+                    // IssuerSerial
+                    DerEncoder.ConstructSegmentedSequence(new List<byte[][]>()
+                    {
+                        DerEncoder.ConstructSegmentedSequence(new List<byte[][]>()
+                        {
+                            // GeneralNames
+                            DerEncoder.ConstructSegmentedContextSpecificValue(contextId: 4, items: new byte[][] { cert.IssuerName.RawData })
+                        }),
+
+                        DerEncoder.SegmentedEncodeUnsignedInteger(serialNumber)
+                    })
+                })
             });
         }
 
         // Cert -> Hash pair
         private static KeyValuePair<Common.HashAlgorithmName, byte[]> GetESSCertIDv2Entry(X509Certificate2 cert, Common.HashAlgorithmName hashAlgorithm)
         {
-            // Hash the certificate
-            var hashValue = GetCertificateHash(cert, hashAlgorithm);
+            var hashValue = CertificateUtility.GetHash(cert, hashAlgorithm);
 
             return new KeyValuePair<Common.HashAlgorithmName, byte[]>(hashAlgorithm, hashValue);
-        }
-
-        // Cert -> Hash
-        private static byte[] GetCertificateHash(X509Certificate2 cert, Common.HashAlgorithmName hashAlgorithm)
-        {
-            return hashAlgorithm.ComputeHash(cert.RawData);
         }
 
         // Attribute -> Hashes
@@ -361,21 +389,23 @@ namespace NuGet.Packaging.Signing
             var entries = new List<KeyValuePair<Common.HashAlgorithmName, byte[]>>();
             var reader = attribute.ToDerSequenceReader();
 
-            while (reader.HasData)
+            var signingCertificateV2 = SigningCertificateV2.Read(reader);
+
+            foreach (var certificate in signingCertificateV2.Certificates)
             {
-                entries.Add(GetESSCertIDv2Entry(reader.ReadSequence()));
+                var entry = GetESSCertIDv2Entry(certificate);
+
+                entries.Add(entry);
             }
 
             return entries;
         }
 
-        // DER -> Hash
-        private static KeyValuePair<Common.HashAlgorithmName, byte[]> GetESSCertIDv2Entry(DerSequenceReader reader)
+        private static KeyValuePair<Common.HashAlgorithmName, byte[]> GetESSCertIDv2Entry(EssCertIdV2 essCertIdV2)
         {
-            var hashAlgorithm = CryptoHashUtility.OidToHashAlgorithmName(reader.ReadOidAsString());
-            var attributeHashValue = reader.ReadOctetString();
+            var hashAlgorithm = CryptoHashUtility.OidToHashAlgorithmName(essCertIdV2.HashAlgorithm.Algorithm.Value);
 
-            return new KeyValuePair<Common.HashAlgorithmName, byte[]>(hashAlgorithm, attributeHashValue);
+            return new KeyValuePair<Common.HashAlgorithmName, byte[]>(hashAlgorithm, essCertIdV2.CertificateHash);
         }
 
         /// <summary>

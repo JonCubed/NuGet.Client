@@ -103,9 +103,9 @@ namespace NuGet.Packaging.Test
         public void GetCertificateChain_WithUntrustedRoot_Throws()
         {
             using (var chain = new X509Chain())
-            using (var rootCertificate = GetCertificate("root.crt"))
-            using (var intermediateCertificate = GetCertificate("intermediate.crt"))
-            using (var leafCertificate = GetCertificate("leaf.crt"))
+            using (var rootCertificate = SignTestUtility.GetCertificate("root.crt"))
+            using (var intermediateCertificate = SignTestUtility.GetCertificate("intermediate.crt"))
+            using (var leafCertificate = SignTestUtility.GetCertificate("leaf.crt"))
             {
                 var extraStore = new X509Certificate2Collection();
 
@@ -123,9 +123,9 @@ namespace NuGet.Packaging.Test
         public void GetCertificateChain_ReturnsCertificatesInOrder()
         {
             using (var chain = new X509Chain())
-            using (var rootCertificate = GetCertificate("root.crt"))
-            using (var intermediateCertificate = GetCertificate("intermediate.crt"))
-            using (var leafCertificate = GetCertificate("leaf.crt"))
+            using (var rootCertificate = SignTestUtility.GetCertificate("root.crt"))
+            using (var intermediateCertificate = SignTestUtility.GetCertificate("intermediate.crt"))
+            using (var leafCertificate = SignTestUtility.GetCertificate("leaf.crt"))
             {
                 chain.ChainPolicy.ExtraStore.Add(rootCertificate);
                 chain.ChainPolicy.ExtraStore.Add(intermediateCertificate);
@@ -154,7 +154,7 @@ namespace NuGet.Packaging.Test
                 }))
             {
                 Assert.Equal(1, GetExtendedKeyUsageCount(certificate));
-                Assert.True(SigningUtility.HasExtendedKeyUsage(certificate, Oids.CodeSigningEkuOid));
+                Assert.True(SigningUtility.HasExtendedKeyUsage(certificate, Oids.CodeSigningEku));
             }
         }
 
@@ -164,7 +164,7 @@ namespace NuGet.Packaging.Test
             using (var certificate = SigningTestUtility.GenerateCertificate("test", generator => { }))
             {
                 Assert.Equal(0, GetExtendedKeyUsageCount(certificate));
-                Assert.False(SigningUtility.HasExtendedKeyUsage(certificate, Oids.CodeSigningEkuOid));
+                Assert.False(SigningUtility.HasExtendedKeyUsage(certificate, Oids.CodeSigningEku));
             }
         }
 
@@ -181,7 +181,7 @@ namespace NuGet.Packaging.Test
                 }))
             {
                 Assert.Equal(1, GetExtendedKeyUsageCount(certificate));
-                Assert.True(SigningUtility.IsValidForPurposeFast(certificate, Oids.CodeSigningEkuOid));
+                Assert.True(SigningUtility.IsValidForPurposeFast(certificate, Oids.CodeSigningEku));
             }
         }
 
@@ -198,7 +198,7 @@ namespace NuGet.Packaging.Test
                 }))
             {
                 Assert.Equal(1, GetExtendedKeyUsageCount(certificate));
-                Assert.False(SigningUtility.IsValidForPurposeFast(certificate, Oids.CodeSigningEkuOid));
+                Assert.False(SigningUtility.IsValidForPurposeFast(certificate, Oids.CodeSigningEku));
             }
         }
 
@@ -215,7 +215,7 @@ namespace NuGet.Packaging.Test
                 }))
             {
                 Assert.Equal(2, GetExtendedKeyUsageCount(certificate));
-                Assert.False(SigningUtility.IsValidForPurposeFast(certificate, Oids.CodeSigningEkuOid));
+                Assert.False(SigningUtility.IsValidForPurposeFast(certificate, Oids.CodeSigningEku));
             }
         }
 
@@ -225,7 +225,7 @@ namespace NuGet.Packaging.Test
             using (var certificate = SigningTestUtility.GenerateCertificate("test", generator => { }))
             {
                 Assert.Equal(0, GetExtendedKeyUsageCount(certificate));
-                Assert.True(SigningUtility.IsValidForPurposeFast(certificate, Oids.CodeSigningEkuOid));
+                Assert.True(SigningUtility.IsValidForPurposeFast(certificate, Oids.CodeSigningEku));
             }
         }
 
@@ -233,20 +233,13 @@ namespace NuGet.Packaging.Test
         {
             foreach (var extension in certificate.Extensions)
             {
-                if (string.Equals(extension.Oid.Value, Oids.EnhancedKeyUsageOid))
+                if (string.Equals(extension.Oid.Value, Oids.EnhancedKeyUsage))
                 {
                     return ((X509EnhancedKeyUsageExtension)extension).EnhancedKeyUsages.Count;
                 }
             }
 
             return 0;
-        }
-
-        private static X509Certificate2 GetCertificate(string name)
-        {
-            var bytes = ResourceTestUtility.GetResourceBytes($"NuGet.Packaging.Test.compiler.resources.{name}", typeof(SigningUtilityTests));
-
-            return new X509Certificate2(bytes);
         }
     }
 }

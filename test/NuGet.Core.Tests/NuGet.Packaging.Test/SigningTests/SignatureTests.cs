@@ -71,7 +71,7 @@ namespace NuGet.Packaging.Test
                     () => Signature.Load(test.SignedCms.Encode()));
 
                 Assert.Equal(NuGetLogCode.NU3011, exception.Code);
-                Assert.Equal("The author signature is invalid.", exception.Message);
+                Assert.Equal("The signing-certificate-v2 attribute must be present.", exception.Message);
             }
         }
 
@@ -93,12 +93,12 @@ namespace NuGet.Packaging.Test
                     () => Signature.Load(test.SignedCms.Encode()));
 
                 Assert.Equal(NuGetLogCode.NU3011, exception.Code);
-                Assert.Equal("The author signature is invalid.", exception.Message);
+                Assert.Equal("The primary signature is invalid.", exception.Message);
             }
         }
 
         [Fact]
-        public void Load_WithAuthorSignature_ReturnSignature()
+        public void Load_WithAuthorSignature_ReturnsSignature()
         {
             using (var test = new LoadTest(_fixture))
             {

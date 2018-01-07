@@ -5,6 +5,7 @@ using System;
 using System.Globalization;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using NuGet.Common;
 
 namespace NuGet.Packaging.Signing
 {
@@ -73,7 +74,6 @@ namespace NuGet.Packaging.Signing
             return collectionStringBuilder.ToString();
         }
 
-
         public static string X509ChainToString(X509Chain chain)
         {
             var collectionStringBuilder = new StringBuilder();
@@ -95,6 +95,11 @@ namespace NuGet.Packaging.Signing
             }
 
             return collectionStringBuilder.ToString();
+        }
+
+        internal static byte[] GetHash(X509Certificate2 certificate, Common.HashAlgorithmName hashAlgorithm)
+        {
+            return hashAlgorithm.ComputeHash(certificate.RawData);
         }
     }
 }

@@ -63,7 +63,7 @@ namespace NuGet.Packaging.Signing
         /// <returns>True if the certificate has the lifetime signing EKU</returns>
         public static bool HasLifetimeSigningEku(X509Certificate2 certificate)
         {
-            return HasExtendedKeyUsage(certificate, Oids.LifetimeSignerEkuOid);
+            return HasExtendedKeyUsage(certificate, Oids.LifetimeSignerEku);
         }
 
         /// <summary>
@@ -141,7 +141,7 @@ namespace NuGet.Packaging.Signing
         {
             foreach (var extension in certificate.Extensions)
             {
-                if (string.Equals(extension.Oid.Value, Oids.EnhancedKeyUsageOid))
+                if (string.Equals(extension.Oid.Value, Oids.EnhancedKeyUsage))
                 {
                     var ekuExtension = (X509EnhancedKeyUsageExtension)extension;
 
@@ -174,7 +174,7 @@ namespace NuGet.Packaging.Signing
         {
             foreach (var extension in certificate.Extensions)
             {
-                if (string.Equals(extension.Oid.Value, Oids.EnhancedKeyUsageOid))
+                if (string.Equals(extension.Oid.Value, Oids.EnhancedKeyUsage))
                 {
                     var ekuExtension = (X509EnhancedKeyUsageExtension)extension;
 
@@ -249,11 +249,11 @@ namespace NuGet.Packaging.Signing
         {
             if (certificateType == NuGetVerificationCertificateType.Signature)
             {
-                policy.ApplicationPolicy.Add(new Oid(Oids.CodeSigningEkuOid));
+                policy.ApplicationPolicy.Add(new Oid(Oids.CodeSigningEku));
             }
             else if (certificateType == NuGetVerificationCertificateType.Timestamp)
             {
-                policy.ApplicationPolicy.Add(new Oid(Oids.TimeStampingEkuOid));
+                policy.ApplicationPolicy.Add(new Oid(Oids.TimeStampingEku));
             }
 
             policy.ExtraStore.AddRange(additionalCertificates);

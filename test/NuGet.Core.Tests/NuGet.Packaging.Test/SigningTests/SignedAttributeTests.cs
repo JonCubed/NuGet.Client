@@ -262,7 +262,7 @@ namespace NuGet.Packaging.Test
         [Fact]
         public void GetESSCertIDv2Entries_RejectsUnexpectedOid()
         {
-            var attribute = new CryptographicAttributeObject(new Oid(Oids.TimeStampingEkuOid));
+            var attribute = new CryptographicAttributeObject(new Oid(Oids.TimeStampingEku));
 
             var ex = Assert.Throws<ArgumentException>(
                 () => AttributeUtility.GetESSCertIDv2Entries(attribute));

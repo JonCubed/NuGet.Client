@@ -20,7 +20,7 @@ namespace NuGet.Common {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Strings {
@@ -148,6 +148,15 @@ namespace NuGet.Common {
         internal static string UnsupportedHashAlgorithm {
             get {
                 return ResourceManager.GetString("UnsupportedHashAlgorithm", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The hash algorithm &apos;{0}&apos; is unsupported..
+        /// </summary>
+        internal static string UnsupportedHashAlgorithmName {
+            get {
+                return ResourceManager.GetString("UnsupportedHashAlgorithmName", resourceCulture);
             }
         }
     }

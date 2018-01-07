@@ -274,7 +274,7 @@ namespace NuGet.Commands
 
             foreach (var certificate in matchingCollection)
             {
-                if (SigningUtility.IsValidForPurposeFast(certificate, Oids.CodeSigningEkuOid))
+                if (SigningUtility.IsValidForPurposeFast(certificate, Oids.CodeSigningEku))
                 {
                     filteredCollection.Add(certificate);
                 }
