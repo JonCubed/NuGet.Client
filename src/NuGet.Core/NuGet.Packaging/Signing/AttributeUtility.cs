@@ -146,9 +146,9 @@ namespace NuGet.Packaging.Signing
         public static CryptographicAttributeObject GetSigningCertificateV2(IReadOnlyList<X509Certificate2> chain, Common.HashAlgorithmName hashAlgorithm)
         {
             var signingCertificateV2 = SigningCertificateV2.Create(chain, hashAlgorithm);
-            var desiredSequence = signingCertificateV2.Encode();
+            var bytes = signingCertificateV2.Encode();
 
-            var data = new AsnEncodedData(Oids.SigningCertificateV2, desiredSequence);
+            var data = new AsnEncodedData(Oids.SigningCertificateV2, bytes);
 
             // Create an attribute
             return new CryptographicAttributeObject(
